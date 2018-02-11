@@ -1,19 +1,14 @@
 const config = require("../config.json");
 const snekfetch = require("snekfetch");
 const Discord = require("discord.js");
+const mobLink = "https://www.divine-pride.net/api/database/monster/";
 
-function convertTime(num) {
-    var minutes = Math.floor(num / 60000);
-    var seconds = ((num % 60000) / 1000).toFixed(0);
-    return minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
-}
-
-exports.run = async(client, message, args, sqlCon) => {
+exports.run = async(client, message, args, connection) => {
     if(!args[0]) return message.channel.send("Please enter the item name, Example: _!item jellopy_");
-    let text = args.join(" ");
-    let tempMsg = await message.channel.send("Fetching...");
+    const text = args.join(" ");
+    const tempMsg = await message.channel.send("Fetching...");
 
-    sqlCon.query(`SELECT 
+    connection.query(`SELECT 
             mob_db_re.ID,
             mob_db_re.iName as iName,
             mob_db_re.LV,
@@ -42,26 +37,24 @@ exports.run = async(client, message, args, sqlCon) => {
             LEFT JOIN item_db_re i8 ON mob_db_re.Drop8id = i8.id
             LEFT JOIN item_db_re i9 ON mob_db_re.Drop9id = i9.id
             LEFT JOIN item_db_re card ON mob_db_re.DropCardid = card.id
-            WHERE iName = '${text}'`, (err,row) => {
+            WHERE iName = '${text}' LIMIT 1`, (err,row) => {
                 if(err) return message.channel.send(err) + tempMsg.delete();
                 if(!row[0]) return message.channel.send("No available data to show.") + tempMsg.delete();
 
-                let mobLink = "https://www.divine-pride.net/api/database/monster/";
-
-                var api = mobLink + row[0].ID + config.apiKey;
+                const api = mobLink + row[0].ID + config.app.apiKey;
                     
                 snekfetch.get(api).then(r => {
-                    let result = r.body;
-                    let spawn = result.spawn;
-                    let mapSpawn = [];
+                    const result = r.body;
+                    const spawn = result.spawn;
+                    const mapSpawn = [];
                     
-                    for(let x in spawn) {
+                    for(const x in spawn) {
                         if(mapSpawn.indexOf(spawn[x].mapname) == -1) {
                             mapSpawn.push(spawn[x].mapname);
                         }
                     }
 
-                    let drops = row[0].Drop1 + ", " + row[0].Drop2 + ", " + row[0].Drop3 
+                    const drops = row[0].Drop1 + ", " + row[0].Drop2 + ", " + row[0].Drop3 
                     + "\n" + row[0].Drop4 + ", " + row[0].Drop5 + ", " + row[0].Drop6 
                     + "\n" + row[0].Drop7 + ", " + row[0].Drop8 + ", " + row[0].Drop9;
                 
